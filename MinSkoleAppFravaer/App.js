@@ -6,50 +6,6 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 
 export default function App() {
-  const [registreretEnhed, setRegistreretEnhed] = useState(false);
-  const [nfcStatus, setNfcStatus] = useState("Tryk på + for at starte scanning");
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      NfcManager.start();
-    }
-  }, []);
-
-  const cancelIfNeeded = async () => {
-    try {
-      await NfcManager.cancelTechnologyRequest();
-      console.log('Forrige NFC-request blev annulleret');
-    } catch (e) {
-      // Ignorer hvis ingen aktiv request
-    }
-  };
-
-  const scanNfc = async () => {
-    if (Platform.OS === 'web') {
-      console.log('NFC ikke understøttet på web');
-      setNfcStatus("NFC ikke understøttet på web");
-      return;
-    }
-
-    setNfcStatus("Anmoder om NFC adgang...");
-    await cancelIfNeeded();
-
-    try {
-      await NfcManager.requestTechnology(NfcTech.Ndef);
-      setNfcStatus("Hold en NFC-tag tæt på...");
-      console.log("Venter på NFC-tag...");
-
-      const tag = await NfcManager.getTag();
-      console.log("NFC-tag modtaget:", tag);
-      setRegistreretEnhed(true);
-      setNfcStatus("Enhed registreret!");
-    } catch (err) {
-      console.warn("NFC fejl:", err);
-      setNfcStatus("Fejl under scanning eller annulleret");
-    } finally {
-      await cancelIfNeeded();
-    }
-  };
 
   return (
     <SafeAreaProvider style={styles.mainContainer}>
