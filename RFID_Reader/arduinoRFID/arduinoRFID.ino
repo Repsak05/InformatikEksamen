@@ -6,7 +6,8 @@
 #define RST_PIN 9
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
 
-const int buzzer = 8; //buzzer to arduino pin 9
+const int buzzer = 8;
+bool SOUND_IS_ON = false;
  
 void setup() 
 {
@@ -23,11 +24,10 @@ void loop()
   if(ID.length()){
     Serial.println(ID);
 
-    //Set buzzer active (Might want to get signal from .py to ensure that it worked)
-    tone(buzzer, 1000); // Send 1KHz sound signal...
-    delay(500);         // ...for 1 sec
+    if(SOUND_IS_ON) tone(buzzer, 1000); // Send 1KHz sound signal...
+    delay(100);         // ...for some time in ms
     noTone(buzzer);     // Stop sound...
-    delay(2000);         
+    delay(2000);
   }
 } 
 
