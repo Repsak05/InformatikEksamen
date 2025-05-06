@@ -1,23 +1,34 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 function App() {
+  const [users, setUsers] = useState([]);
+  const [name, setName] = useState('');
+
+  const fetchUsers = async () => {
+    const res = await axios.get('/users');
+    setUsers(res.data);
+  };
+  
+  const addUser = async () => {
+    await axios.post('/users', { name });
+    setName('');
+    fetchUsers();
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Users</h1>
+      <input value={name} onChange={e => setName(e.target.value)} />
+      <button onClick={addUser}>Add</button>
+      <ul>
+        {users.map(u => <li key={u.id}>{u.name}</li>)}
+      </ul>
     </div>
   );
 }
