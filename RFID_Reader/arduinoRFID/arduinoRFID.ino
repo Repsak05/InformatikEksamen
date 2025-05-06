@@ -20,7 +20,7 @@ void setup()
 }
 void loop() 
 {
-  String ID = getId();
+  String ID = removeSpaces(getId()); //ID is 8 characters long (No spaces)
   if(ID.length()){
     Serial.println(ID);
 
@@ -30,6 +30,16 @@ void loop()
     delay(2000);
   }
 } 
+
+String removeSpaces(String input) {
+  String result = "";
+  for (int i = 0; i < input.length(); i++) {
+    if (input[i] != ' ') {
+      result += input[i];
+    }
+  }
+  return result;
+}
 
 String getId()
 {
