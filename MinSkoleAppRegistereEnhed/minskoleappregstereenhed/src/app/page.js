@@ -86,11 +86,16 @@ export default function Home() {
               value={brugernavn}
               onChange={(e) => setBrugernavn(e.target.value)}
             />
+            <input
+              name="Adgangskode"
+              placeholder="Adgangskode"
+              type="password"
+            />
             {rfid ? (
               <input name="RFID" value={rfid} readOnly className={styles.rfidInput} />
             ) : (
               <button type="button" onClick={læsFraSerielPort}>
-                Læs RFID
+                Tilføj Enhed
               </button>
             )}
             <button type="button" onClick={handleSubmit}>
