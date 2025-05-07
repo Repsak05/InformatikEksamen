@@ -1,9 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
+// import { getAllSubjectAbsence, getTotalAbsence } from "src/app/api/getAbsence/getAbsenceDB.js";
+
 export default function Home() {
+  const EXAMPLE_CARD_ID = "69 A1 64 A3";
+  // getAllSubjectAbsence(EXAMPLE_CARD_ID);
+  // getTotalAbsence(EXAMPLE_CARD_ID);
+  const [absenceData, setAbsenceData] = useState();
+
+  useEffect(() => {
+    fetch(`/api/getAbsence?card_id=${EXAMPLE_CARD_ID}`)
+      .then(res => res.json()) // Expecting JSON response
+      .then(json => setAbsenceData(json)) 
+      .catch(err => console.error('Error fetching absence data:', err)); // Handle errors
+  }, []);
+
+  console.log(absenceData);
+
   const [rfid, setRfid] = useState(null);
   const [brugernavn, setBrugernavn] = useState("");
 
