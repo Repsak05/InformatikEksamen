@@ -1,105 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function Home() {
   const [rfid, setRfid] = useState(null);
+  const [brugernavn, setBrugernavn] = useState("");
 
   const læsFraSerielPort = async () => {
-    console.log("læsFraSerielPort function started");
-    
     if (!("serial" in navigator)) {
-      console.log("Web Serial API not supported");
       alert("Denne browser understøtter ikke Web Serial API.");
       return;
     }
-
-    let port, reader;
+  
+    let port, reader, inputDone;
     try {
-      console.log("Requesting serial port...");
       port = await navigator.serial.requestPort();
-      console.log("Serial port requested");
-      
       await port.open({ baudRate: 9600 });
-      console.log("Port opened");
-
+  
       const decoder = new TextDecoderStream();
-      const inputDone = port.readable.pipeTo(decoder.writable);
+      inputDone = port.readable.pipeTo(decoder.writable);
       const inputStream = decoder.readable;
       reader = inputStream.getReader();
-
+  
       let buffer = "";
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        
+  
         buffer += value;
-        console.log("Buffer:", buffer);
-
         const newlineIndex = buffer.indexOf("\n");
         if (newlineIndex !== -1) {
           const linje = buffer.slice(0, newlineIndex).trim();
-          console.log("Modtaget UID:", linje);
-          console.log("Sidste 8 tegn:", linje.slice(-8));
-          
-          const sidste8 = linje.slice(-8);
-          console.log("Setting RFID state:", sidste8);
-          setRfid(sidste8);
+          setRfid(linje.slice(-8));
           break;
         }
       }
     } catch (err) {
-      console.error("Error in læsFraSerielPort:", err);
-      alert("Uventet fejl – se konsollen.");
+      console.error("Fejl ved læsning:", err);
+      alert("Fejl under læsning – se konsollen.");
     } finally {
-      if (reader) {
-        try {
+      try {
+        if (reader) {
           await reader.cancel();
           reader.releaseLock();
-        } catch (_) {}
-      }
-      if (port && port.readable) {
-        try {
-          await port.close();
-        } catch (_) {}
+        }
+        if (inputDone) await inputDone;
+        if (port) await port.close();
+      } catch (err) {
+        console.warn("Fejl ved lukning:", err);
       }
     }
   };
-
-  const sendRfidToDatabase = async () => {
-    console.log("sendRfidToDatabase function started");
-    if (!rfid) {
-      console.log("No RFID value to send");
-      return;
-    }
-    
-    try {
-      console.log("Sending RFID to database:", rfid);
-      const response = await fetch("api/saveRfid.js", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ rfid }),
-      });
-      console.log("Response status:", response.status);
-      const data = await response.json();
-      console.log("Received data:", data);
-      
-      if (data.error) {
-        console.error("Error received from server:", data.error);
-        alert("Error: " + data.error);
-      } else {
-        console.log("RFID saved successfully");
-        alert("RFID saved successfully!");
-      }
-    } catch (error) {
-      console.error("Error sending RFID to database:", error);
-      alert("Error saving RFID");
-    }
-  };
+  
+  const handleSubmit = async () => {
+    fetch('/api/addstudent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rfid, name: brugernavn }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) alert("Registreret!");
+      else alert("Fejl: " + data.error);
+    });
+  }
 
   return (
     <div className={styles.page}>
@@ -113,26 +78,23 @@ export default function Home() {
             alt="Aarhus Tech Logo"
             className={styles.formImage}
           />
-          <form action="post" className={styles.formContent}>
-            <input name="Brugernavn" placeholder="Brugernavn" type="username" />
-            <input name="Adgangskode" placeholder="Adgangskode" type="password" />
-
+          <form className={styles.formContent} onSubmit={(e) => e.preventDefault()}>
+            <input
+              name="Brugernavn"
+              placeholder="Brugernavn"
+              type="text"
+              value={brugernavn}
+              onChange={(e) => setBrugernavn(e.target.value)}
+            />
             {rfid ? (
-              <input
-                name="RFID"
-                value={rfid}
-                placeholder="RFID"
-                type="text"
-                readOnly
-                className={styles.rfidInput}
-              />
+              <input name="RFID" value={rfid} readOnly className={styles.rfidInput} />
             ) : (
               <button type="button" onClick={læsFraSerielPort}>
-                Tilføj Enhed
+                Læs RFID
               </button>
             )}
-            <button type="button" onClick={sendRfidToDatabase}>
-              Registerer
+            <button type="button" onClick={handleSubmit}>
+              Registrér
             </button>
           </form>
         </div>
