@@ -82,6 +82,18 @@ def createTables():
 
 createTables()
 
+def getStudentIdFromCard(card_id):
+    q = f'''SELECT student_id FROM STUDENTS
+           WHERE card_id = "{card_id}"
+           ORDER BY student_id ASC LIMIT 1;'''
+    
+    res = cursor.execute(q).fetchall()
+    if not res:
+        print("NO STUDENT_ID WAS FOUND")
+        return
+    
+    return res[0][0]
+    
 #!-----------------------------------------------------------------------------------
 #!------------------------ THINGS THAT MUST BE DONE MANUALLY ------------------------
 #!-----------------------------------------------------------------------------------
@@ -92,8 +104,7 @@ def addSchool(name): #Issue: Can be multiple with same name
         
     cursor.execute(q)
     print(q)
-    conn.commit()
-    
+    conn.commit()   
 
 def addTeacher(name):
     q = f'''INSERT INTO teachers (name)
@@ -213,24 +224,73 @@ def studentEnteredRoom(card_id, classroom = SCANNER_CLASSROOM): #maybe join tabl
             print("UPDATED class: ", class_id)
     
 # studentEnteredRoom(EXAMPLE_STUDENT_CARD_ID)
+#!-----------------------------------------------------------------------------------
+#!-------------------------- GET STATICS ABOUT YOUR ABSENCE -------------------------
+#!-----------------------------------------------------------------------------------
+
+def getStats(card_id):
+    studentID = getStudentIdFromCard(card_id)
+    if not studentID: return
+
+    q = f'''SELECT absence, class_schedule_id FROM class_schedule_student_absence
+            WHERE student_id = {studentID};'''
+    
+    absenceStates = cursor.execute(q).fetchall()
+    # print(absenceStates)  
+    
+    #VERIFY THAT THE SCHEDULE IS COMPLETE
+    classesAbsence = {}
+    
+    amountOfZero = 0
+    amountOfOne = 0
+    
+    for [state, class_schedule_id] in absenceStates: #?maybe MERGE db instead - studen -> class_schedule_absence?
+        q = f'''SELECT class_id, start_time FROM class_schedule
+                WHERE class_schedule_id = {class_schedule_id}'''
+        
+        currentTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        [class_id, startTime] = cursor.execute(q).fetchall()[0]
+        
+        if startTime <= currentTime:
+            if state == 0: amountOfZero += 1
+            if state == 1: amountOfOne += 1
+            
+            # Get classname:
+            q = f'''SELECT name FROM classes
+                    WHERE class_id = {class_id}'''
+            
+            name = cursor.execute(q).fetchall()[0][0]            
+            statename = "participated" if state == 1 else "absence"
+            if name not in classesAbsence: classesAbsence[name] = {}
+            if statename not in classesAbsence[name]: classesAbsence[name][statename] = 0
+            classesAbsence[name][statename] += 1
+    
+    print(classesAbsence)
+    
+    # percent = 0
+    # if amountOfOne + amountOfZero > 0: percent = round(amountOfZero / (amountOfOne + amountOfZero) * 100)
+    # print({"Absence: " : amountOfZero, " | Participated: " : amountOfOne, " | Percentage absence: " : str(percent) +  "%" })
+        
+
+getStats(EXAMPLE_STUDENT_CARD_ID)
 
 #!-----------------------------------------------------------------------------------
 #!-------------------- READ CARD_ID FROM SCANNER THROUGH ARDUINO --------------------
 #!-----------------------------------------------------------------------------------
 # Read serial port (Information from Arduino)
-ser = serial.Serial(COM_PORT, BAUD)
+# ser = serial.Serial(COM_PORT, BAUD)
 
-def read_serial():
-    if ser.is_open:
-        return ser.readline().decode().strip()
-    return None
+# def read_serial():
+#     if ser.is_open:
+#         return ser.readline().decode().strip()
+#     return None
 
 
-while True:
-    STUDENT_ID = read_serial()
+# while True:
+#     STUDENT_ID = read_serial()
     
-    if STUDENT_ID:
-        studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
+#     if STUDENT_ID:
+#         studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
 
 
 
