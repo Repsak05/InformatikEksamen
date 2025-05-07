@@ -10,7 +10,7 @@ COM_PORT = 'COM10'
 BAUD = 9600
 
 SCANNER_CLASSROOM = "D2354"
-EXAMPLE_STUDENT_CARD_ID ="69 A1 64 A3"
+EXAMPLE_STUDENT_CARD_ID ="69A164A3"
 
 conn = sqlite3.connect(DB_NAME)
 cursor = conn.cursor()
@@ -144,7 +144,7 @@ def addStudentToClass(studentID, classID):
     print(q)
     conn.commit()
     
-# addStudentToClass(2, 2)
+# addStudentToClass(4, 1)
     
 def addClassSchedule(classID, startTime, endTime, classroom = SCANNER_CLASSROOM):
     q = f'''INSERT INTO class_schedule (class_id, start_time, end_time, classroom)
@@ -214,9 +214,19 @@ def studentEnteredRoom(card_id, classroom = SCANNER_CLASSROOM): #maybe join tabl
         
         ans = cursor.execute(q).fetchall()
         
-        if(len(ans)):
+        q = f'''SELECT absence FROM class_schedule_student_absence
+                WHERE class_schedule_id = "{class_shedule_id}"
+                AND student_id = {studentID};'''
+        
+
+        absen = cursor.execute(q).fetchall()
+        if(len(ans) and len(absen)):
+            
+            SET_OPPOSITE_ABSENCE = 1 - absen[0][0] #absen always 0?
+            # print("Now: ", SET_OPPOSITE_ABSENCE, " --> ", class_shedule_id, studentID)
+            
             q = f'''UPDATE class_schedule_student_absence
-                    SET absence = 0
+                    SET absence = {SET_OPPOSITE_ABSENCE}
                     WHERE class_schedule_id = {class_shedule_id}'''
             
             cursor.execute(q)
@@ -272,25 +282,25 @@ def getStats(card_id):
     # print({"Absence: " : amountOfZero, " | Participated: " : amountOfOne, " | Percentage absence: " : str(percent) +  "%" })
         
 
-getStats(EXAMPLE_STUDENT_CARD_ID)
+# getStats(EXAMPLE_STUDENT_CARD_ID)
 
 #!-----------------------------------------------------------------------------------
 #!-------------------- READ CARD_ID FROM SCANNER THROUGH ARDUINO --------------------
 #!-----------------------------------------------------------------------------------
 # Read serial port (Information from Arduino)
-# ser = serial.Serial(COM_PORT, BAUD)
+ser = serial.Serial(COM_PORT, BAUD)
 
-# def read_serial():
-#     if ser.is_open:
-#         return ser.readline().decode().strip()
-#     return None
+def read_serial():
+    if ser.is_open:
+        return ser.readline().decode().strip()
+    return None
 
 
-# while True:
-#     STUDENT_ID = read_serial()
+while True:
+    STUDENT_ID = read_serial()
     
-#     if STUDENT_ID:
-#         studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
+    if STUDENT_ID:
+        studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
 
 
 

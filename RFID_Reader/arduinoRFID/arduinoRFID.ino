@@ -7,7 +7,7 @@
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
 
 const int buzzer = 8;
-bool SOUND_IS_ON = false;
+bool SOUND_IS_ON = true;
  
 void setup() 
 {
