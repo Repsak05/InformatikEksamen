@@ -40,3 +40,13 @@ a {
     color-scheme: dark;
   }
 }
+
+.rdp-root {
+  --rdp-accent-color: #F03824; /* Change the accent color to indigo. */
+  --rdp-accent-background-color: #C00F0C; /* Change the accent background color. */
+  /* Add more CSS variables here. */
+
+
+
+
+}

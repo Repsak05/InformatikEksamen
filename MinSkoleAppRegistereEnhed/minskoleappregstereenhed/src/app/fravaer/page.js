@@ -3,6 +3,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import styles from "../page.module.css";
 import { useState } from "react";
+import { format } from "date-fns";
+import { DayPicker } from "react-day-picker";
 
 const data = [
   { name: "Ikke Godkendt", value: 14.75 },
@@ -28,6 +30,19 @@ const sorted = classNames.sort((a, b) => b.value - a.value);
 
 export default function Fravaer() {
   const [visning, setVisning] = useState("graf");
+
+  const [showPicker, setShowPicker] = useState(false);
+  const [range, setRange] = useState({ from: undefined, to: undefined });
+
+  const togglePicker = () => setShowPicker(prev => !prev);
+
+  const calculateDays = (from, to) => {
+    if (!from || !to) return null;
+    const diffTime = Math.abs(to - from);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // inkl. begge dage
+    return diffDays;
+  };
+
 
   return (
     <div className={styles.absencePage}>
@@ -56,9 +71,35 @@ export default function Fravaer() {
         <section>
           <div className={styles.absenceHeader}>
             <p>
-              <b>Sidste 30 dage</b>
+              <b>Sidste {calculateDays(range.from, range.to)} dage</b>
             </p>
-            <span>07/04/2025 - 07/05/2025</span>
+              <div style={{ position: "relative" }}>
+                <button className={styles.dateButton} onClick={togglePicker}>
+                  {range.from && range.to
+                    ? `${range.from.toLocaleDateString("da-DK")} - ${range.to.toLocaleDateString("da-DK")}`
+                    : "Vælg datoer"}
+                </button>
+
+                {showPicker && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: "-25%",
+                    zIndex: 10,
+                    background: '#2C2C2C',
+                    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                    padding: "10px",
+                  }}>
+                    <DayPicker
+                      mode="range"
+                      selected={range}
+                      onSelect={setRange}
+                      disabled={{ after: new Date() }}
+                      onDayClick={() => setShowPicker(false)}
+                    />
+                  </div>
+                )}
+              </div>
           </div>
           <div className={styles.absenceInfo}>
             <span>
