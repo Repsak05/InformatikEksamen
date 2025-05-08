@@ -238,6 +238,52 @@ def studentEnteredRoom(card_id, classroom = SCANNER_CLASSROOM): #maybe join tabl
 #!-------------------------- GET STATICS ABOUT YOUR ABSENCE -------------------------
 #!-----------------------------------------------------------------------------------
 
+def studentAbsence(card_id, subjectID = 0):
+    # studentID = getStudentIdFromCard(card_id)
+    studentID = 2
+    currentTime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    def getResponse(getAbsence = 1, subjectID = 0):
+        q = f'''SELECT count(*) FROM student_classes
+            JOIN class_schedule ON student_classes.class_id = class_schedule.class_id
+            JOIN class_schedule_student_absence ON student_classes.student_id = class_schedule_student_absence.student_id
+            WHERE student_classes.student_id = {studentID}
+            AND class_schedule.start_time <= "{currentTime}"
+            AND class_schedule.end_time >= "{currentTime}"
+            AND class_schedule_student_absence.absence = {getAbsence}'''
+    
+        if subjectID > 0: q += f''' AND class_schedule.class_id = {subjectID}'''
+        
+        res = cursor.execute(q).fetchall()
+        if(len(res)): return res[0][0]
+        return 0
+    
+    
+    absent = getResponse(1, subjectID)
+    present = getResponse(0, subjectID)
+    
+    if absent + present == 0: return 0
+    return int((absent / (absent + present)) * 100)
+
+def getAllSubjectAbsence(card_id):
+    studentID = getStudentIdFromCard(card_id)
+    # studentID = 2
+    
+    q = f'''SELECT classes.class_id, classes.name FROM classes
+            JOIN student_classes ON classes.class_id = student_classes.class_id
+            WHERE student_classes.student_id = {studentID}'''
+    
+    allClassIDs = cursor.execute(q).fetchall()
+    results = []
+    for classID, name in allClassIDs:
+        absenceRate = studentAbsence(card_id, classID)
+        results.append({"name" : name, "value" : absenceRate})
+        
+    print(results)
+
+getAllSubjectAbsence("69 A1 64 A3")
+# print(studentAbsence(0, 0))
+
 def getStats(card_id):
     studentID = getStudentIdFromCard(card_id)
     if not studentID: return
@@ -288,19 +334,19 @@ def getStats(card_id):
 #!-------------------- READ CARD_ID FROM SCANNER THROUGH ARDUINO --------------------
 #!-----------------------------------------------------------------------------------
 # Read serial port (Information from Arduino)
-ser = serial.Serial(COM_PORT, BAUD)
+# ser = serial.Serial(COM_PORT, BAUD)
 
-def read_serial():
-    if ser.is_open:
-        return ser.readline().decode().strip()
-    return None
+# def read_serial():
+#     if ser.is_open:
+#         return ser.readline().decode().strip()
+#     return None
 
 
-while True:
-    STUDENT_ID = read_serial()
+# while True:
+#     STUDENT_ID = read_serial()
     
-    if STUDENT_ID:
-        studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
+#     if STUDENT_ID:
+#         studentEnteredRoom(STUDENT_ID, SCANNER_CLASSROOM)
 
 
 

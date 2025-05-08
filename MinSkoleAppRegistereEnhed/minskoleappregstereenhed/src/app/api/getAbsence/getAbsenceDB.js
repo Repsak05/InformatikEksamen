@@ -1,104 +1,112 @@
 import { NextResponse } from "next/server";
 import sqlite3 from "sqlite3";
 import path from "path";
+const { DateTime } = require('luxon'); // optional, for datetime formatting
 
 // Open database connection
 const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db");
 const db = new sqlite3.Database(dbPath);
 
-function runQuery(query, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(query, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+function getStudentIdFromCard(card_id) {
+	const q = `SELECT student_id FROM STUDENTS
+			   WHERE card_id = ?
+			   ORDER BY student_id ASC LIMIT 1`;
+  
+	return new Promise((resolve, reject) => {
+	  db.get(q, [card_id], (err, row) => {
+		if (err) {
+		  console.error("Error executing query:", err);
+		  return reject(err);
+		}
+  
+		if (!row) {
+		  console.log("NO STUDENT_ID WAS FOUND for card_id:", card_id);
+		  return resolve(null);
+		}
+  
+		console.log("Student ID found:", row.student_id);
+		resolve(row.student_id);
+	  });
+	});
+}
+  
+
+async function studentAbsence(card_id, subjectID = 0) {
+	const studentID = await getStudentIdFromCard(card_id);
+	if (!studentID) return 0;
+  
+	const currentTime = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss');
+  
+	const getResponse = (getAbsence) => {
+	  return new Promise((resolve, reject) => {
+		let q = `SELECT count(*) AS count FROM student_classes
+				 JOIN class_schedule ON student_classes.class_id = class_schedule.class_id
+				 JOIN class_schedule_student_absence ON student_classes.student_id = class_schedule_student_absence.student_id
+				 WHERE student_classes.student_id = ?
+				 AND class_schedule.start_time <= ?
+				 AND class_schedule.end_time >= ?
+				 AND class_schedule_student_absence.absence = ?`;
+  
+		const params = [studentID, currentTime, currentTime, getAbsence];
+  
+		if (subjectID > 0) {
+		  q += ` AND class_schedule.class_id = ?`;
+		  params.push(subjectID);
+		}
+  
+		db.get(q, params, (err, row) => {
+		  if (err) return reject(err);
+		  resolve(row?.count || 0);
+		});
+	  });
+	};
+  
+	const absent = await getResponse(1);
+	const present = await getResponse(0);
+  
+	console.log(absent, present);
+	if (absent + present === 0) return 0;
+	return Math.floor((absent / (absent + present)) * 100);
 }
 
-export async function GET(req) {
-  const { searchParams } = new URL(req.url);
-  const card_id = searchParams.get("card_id");
-
-  if (!card_id) {
-    return NextResponse.json({ error: "card_id is required" }, { status: 400 });
+async function getAllSubjectAbsence(card_id) {
+	const studentID = await getStudentIdFromCard(card_id);
+	if (!studentID) return [];
+  
+	const q = `SELECT classes.class_id, classes.name FROM classes
+			   JOIN student_classes ON classes.class_id = student_classes.class_id
+			   WHERE student_classes.student_id = ?`;
+  
+	return new Promise((resolve, reject) => {
+	  db.all(q, [studentID], async (err, allClassIDs) => {
+		if (err) {
+		  console.error("Error querying classes:", err);
+		  return reject(err);
+		}
+  
+		const results = [];
+		for (const { class_id, name } of allClassIDs) {
+		  const absenceRate = await studentAbsence(card_id, class_id);
+		  results.push({ name, value: absenceRate });
+		}
+  
+		resolve(results);
+	  });
+	});
   }
+  
 
-  try {
-    // Get student ID from card
-    const studentRows = await runQuery(
-      "SELECT student_id FROM cards WHERE card_id = ?",
-      [card_id]
-    );
-    if (studentRows.length === 0) {
-      return NextResponse.json({ error: "Student not found" }, { status: 404 });
-    }
+function getTotalAbsence(card_id){
+	const absenceRate = studentAbsence(card_id, 0) || 0;
 
-    const studentID = studentRows[0].student_id;
+	let totalArr = [{"name" : "Ikke Godkendt", "value" : absenceRate}];
 
-    // Get absence states
-    const absenceRows = await runQuery(
-      "SELECT absence, class_schedule_id FROM class_schedule_student_absence WHERE student_id = ?",
-      [studentID]
-    );
-
-    const currentTime = new Date();
-    const classesAbsence = {};
-    let amountOfZero = 0;
-    let amountOfOne = 0;
-
-    for (const row of absenceRows) {
-      const { absence, class_schedule_id } = row;
-
-      // Get class_id and start_time
-      const scheduleRows = await runQuery(
-        "SELECT class_id, start_time FROM class_schedule WHERE class_schedule_id = ?",
-        [class_schedule_id]
-      );
-      if (scheduleRows.length === 0) continue;
-
-      const { class_id, start_time } = scheduleRows[0];
-      const startTime = new Date(start_time);
-
-      if (startTime <= currentTime) {
-        if (absence === 0) amountOfZero++;
-        if (absence === 1) amountOfOne++;
-
-        const classRows = await runQuery(
-          "SELECT name FROM classes WHERE class_id = ?",
-          [class_id]
-        );
-        if (classRows.length === 0) continue;
-
-        const name = classRows[0].name;
-        const statename = absence === 1 ? "participated" : "absence";
-
-        if (!classesAbsence[name]) classesAbsence[name] = {};
-        if (!classesAbsence[name][statename]) classesAbsence[name][statename] = 0;
-        classesAbsence[name][statename]++;
-      }
-    }
-
-    const percent =
-      amountOfOne + amountOfZero > 0
-        ? Math.round((amountOfZero / (amountOfOne + amountOfZero)) * 100)
-        : 0;
-
-    return NextResponse.json({
-      classesAbsence,
-      stats: {
-        absence: amountOfZero,
-        participated: amountOfOne,
-        percent_absence: `${percent}%`,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-
-
-    //USECASE:
-    // const res = await fetch("/api/addstudent?card_id=1234");
-    // const data = await res.json();
-    // console.log(data);
+	// console.log(totalArr);
+	return totalArr
 }
+
+export { getAllSubjectAbsence, getTotalAbsence };
+
+
+// getAllSubjectAbsence("69A164A3");
+// getTotalAbsence("69A164A3");
