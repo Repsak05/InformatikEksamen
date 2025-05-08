@@ -17,13 +17,37 @@ export default function Fravaer() {
   const EXAMPLE_CARD_ID = "69 A1 64 A3";
 
   useEffect(() => {
-    fetch(`/api/getAbsence?card_id=${EXAMPLE_CARD_ID}`)
-      .then(res => res.json())
-      .then(json => setAbsence(json))
-      .catch(err => console.error('Error fetching absence data:', err));
-  }, []);
+    let fetchString = `/api/getAbsence?card_id=${EXAMPLE_CARD_ID}`;
 
-  console.log(absence);
+    if(range.from){
+      fetchString += `&from=${range.from.toISOString()}`;
+    }
+    if(range.to){
+      fetchString += `&to=${range.to.toISOString()}`;
+    }
+  
+    // console.log("Fetching for range:", range.from, range.to);
+    console.log("Fetch string: ", fetchString);
+
+    fetch(fetchString)
+      .then(res => res.json())
+      .then(json => {
+        const extendedTotal = [
+          ...json.total,
+          { name: "For sent", value: 0 },
+          { name: "Godkendt", value: 0 }
+        ];
+  
+        setAbsence({
+          ...json,
+          total: extendedTotal
+        });
+      })
+      .catch(err => console.error('Error fetching absence data:', err));
+  }, [range.from, range.to]);
+  
+
+  // console.log(absence);
 
   const togglePicker = () => setShowPicker(prev => !prev);
 
@@ -36,8 +60,8 @@ export default function Fravaer() {
 
   const sorted = [...absence.allAbsences].sort((a, b) => b.value - a.value);
 
+  // console.log("Range:", range.from, range.to);
 
-  console.log("Range:", range.from, range.to);
   return (
     <div className={styles.absencePage}>
       <header className={styles.header}>
