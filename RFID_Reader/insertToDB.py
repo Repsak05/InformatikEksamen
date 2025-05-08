@@ -134,7 +134,7 @@ def addClass(name, schoolID = 1):
     print(q)
     conn.commit()
 
-# addClass("23htxcp", 1)
+# addClass("Matematik", 1)
 
 def addStudentToClass(studentID, classID):
     q = f'''INSERT OR IGNORE INTO student_classes (student_id, class_id)
@@ -144,7 +144,7 @@ def addStudentToClass(studentID, classID):
     print(q)
     conn.commit()
     
-# addStudentToClass(4, 1)
+# addStudentToClass(2, 3)
     
 def addClassSchedule(classID, startTime, endTime, classroom = SCANNER_CLASSROOM):
     q = f'''INSERT INTO class_schedule (class_id, start_time, end_time, classroom)
@@ -173,7 +173,8 @@ def addClassSchedule(classID, startTime, endTime, classroom = SCANNER_CLASSROOM)
         print(q)
         conn.commit()
           
-# addClassSchedule(1, "2025-04-23 08:00:00", "2025-06-22 10:00:00", SCANNER_CLASSROOM)
+# addClassSchedule(2, "2025-04-23 12:00:00", "2025-06-22 10:00:00", SCANNER_CLASSROOM)
+# addClassSchedule(1, "2025-05-01 15:00:00", "2025-06-22 10:00:00", SCANNER_CLASSROOM)
 
 #!-----------------------------------------------------------------------------------
 #!---------------------- THINGS THAT MUST BE DONE AUTOMATICALLY ---------------------
@@ -249,7 +250,6 @@ def studentAbsence(card_id, subjectID = 0):
             JOIN class_schedule_student_absence ON student_classes.student_id = class_schedule_student_absence.student_id
             WHERE student_classes.student_id = {studentID}
             AND class_schedule.start_time <= "{currentTime}"
-            AND class_schedule.end_time >= "{currentTime}"
             AND class_schedule_student_absence.absence = {getAbsence}'''
     
         if subjectID > 0: q += f''' AND class_schedule.class_id = {subjectID}'''
@@ -281,7 +281,7 @@ def getAllSubjectAbsence(card_id):
         
     print(results)
 
-getAllSubjectAbsence("69 A1 64 A3")
+# getAllSubjectAbsence("69 A1 64 A3")
 # print(studentAbsence(0, 0))
 
 def getStats(card_id):
