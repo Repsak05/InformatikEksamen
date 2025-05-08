@@ -47,7 +47,6 @@ async function studentAbsence(card_id, subjectID = 0) {
 				 JOIN class_schedule_student_absence ON student_classes.student_id = class_schedule_student_absence.student_id
 				 WHERE student_classes.student_id = ?
 				 AND class_schedule.start_time <= ?
-				 AND class_schedule.end_time >= ?
 				 AND class_schedule_student_absence.absence = ?`;
   
 		const params = [studentID, currentTime, currentTime, getAbsence];
