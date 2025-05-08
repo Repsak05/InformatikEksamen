@@ -44,6 +44,8 @@ export default function Fravaer() {
   };
 
 
+
+  console.log("Range:", range.from, range.to);
   return (
     <div className={styles.absencePage}>
       <header className={styles.header}>
@@ -92,10 +94,10 @@ export default function Fravaer() {
                   }}>
                     <DayPicker
                       mode="range"
+                      captionLayout="dropdown"
                       selected={range}
                       onSelect={setRange}
                       disabled={{ after: new Date() }}
-                      onDayClick={() => setShowPicker(false)}
                     />
                   </div>
                 )}
