@@ -3,7 +3,9 @@ import sqlite3 from "sqlite3";
 import path from "path";
 import { promises as fs } from "fs";
 
-const dbPath = path.resolve("C:/Users/nordi/OneDrive/Coding/InformatikEksamen/somename.db");
+
+//const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db"); // Kasper Path
+const dbPath = path.resolve("C:/Users/nordi/OneDrive/Coding/InformatikEksamen/somename.db"); // Nordin Path
 
 export async function POST(req) {
   try {

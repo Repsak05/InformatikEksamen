@@ -4,7 +4,10 @@ import path from "path";
 const { DateTime } = require('luxon'); // optional, for datetime formatting
 
 // Open database connection
-const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db");
+//const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db"); // Kasper Path
+const dbPath = path.resolve("C:/Users/nordi/OneDrive/Coding/InformatikEksamen/somename.db"); // Nordin Path
+
+
 const db = new sqlite3.Database(dbPath);
 
 function getStudentIdFromCard(card_id) {
@@ -106,7 +109,3 @@ function getTotalAbsence(card_id){
 }
 
 export { getAllSubjectAbsence, getTotalAbsence };
-
-
-// getAllSubjectAbsence("69A164A3");
-// getTotalAbsence("69A164A3");
