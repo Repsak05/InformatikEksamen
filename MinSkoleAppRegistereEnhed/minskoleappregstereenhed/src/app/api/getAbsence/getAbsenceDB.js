@@ -7,7 +7,7 @@ const { DateTime } = require('luxon'); // optional, for datetime formatting
 const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db");
 const db = new sqlite3.Database(dbPath);
 
-function getStudentIdFromCard(card_id) {
+async function getStudentIdFromCard(card_id) {
 	const q = `SELECT student_id FROM STUDENTS
 			   WHERE card_id = ?
 			   ORDER BY student_id ASC LIMIT 1`;
@@ -29,7 +29,6 @@ function getStudentIdFromCard(card_id) {
 	  });
 	});
 }
-  
 
 async function studentAbsence(card_id, subjectID = 0) {
 	const studentID = await getStudentIdFromCard(card_id);
@@ -39,23 +38,31 @@ async function studentAbsence(card_id, subjectID = 0) {
   
 	const getResponse = (getAbsence) => {
 	  return new Promise((resolve, reject) => {
-		let q = `SELECT count(*) AS count FROM student_classes
-				 JOIN class_schedule ON student_classes.class_id = class_schedule.class_id
-				 JOIN class_schedule_student_absence ON student_classes.student_id = class_schedule_student_absence.student_id
-				 WHERE student_classes.student_id = ?
-				 AND class_schedule.start_time <= ?
-				 AND class_schedule_student_absence.absence = ?`;
+		let q =`SELECT count(DISTINCT class_schedule.class_schedule_id) FROM student_classes
+				JOIN class_schedule 
+					ON student_classes.class_id = class_schedule.class_id
+				JOIN class_schedule_student_absence 
+					ON student_classes.student_id = class_schedule_student_absence.student_id
+					AND class_schedule.class_schedule_id = class_schedule_student_absence.class_schedule_id
+				WHERE student_classes.student_id = ?
+				AND class_schedule.start_time <= ?
+				AND class_schedule_student_absence.absence = ?`
   
-		const params = [studentID, currentTime, currentTime, getAbsence];
+		const params = [studentID, currentTime, getAbsence];
   
 		if (subjectID > 0) {
-		  q += ` AND class_schedule.class_id = ?`;
+		  q += `\nAND class_schedule.class_id = ?`;
 		  params.push(subjectID);
+		}else{
+			console.log("-------NOW--------");
 		}
   
 		db.get(q, params, (err, row) => {
 		  if (err) return reject(err);
-		  resolve(row?.count || 0);
+		//   console.log("ROW FOUND: ", row);
+		  const amountCount = Object.values(row)[0];
+		//   console.log("RETURNED: ", amountCount);
+		  resolve(amountCount || 0);
 		});
 	  });
 	};
@@ -63,7 +70,7 @@ async function studentAbsence(card_id, subjectID = 0) {
 	const absent = await getResponse(1);
 	const present = await getResponse(0);
   
-	console.log(absent, present);
+	console.log("absent: ", absent, "present: ", present);
 	if (absent + present === 0) return 0;
 	return Math.floor((absent / (absent + present)) * 100);
 }
@@ -86,7 +93,7 @@ async function getAllSubjectAbsence(card_id) {
 		const results = [];
 		for (const { class_id, name } of allClassIDs) {
 		  const absenceRate = await studentAbsence(card_id, class_id);
-		  results.push({ name, value: absenceRate });
+		  results.push({"name" : name, "value" : absenceRate });
 		}
   
 		resolve(results);
@@ -95,12 +102,15 @@ async function getAllSubjectAbsence(card_id) {
   }
   
 
-function getTotalAbsence(card_id){
-	const absenceRate = studentAbsence(card_id, 0) || 0;
+async function getTotalAbsence(card_id){
+	const absenceRate = await studentAbsence(card_id, 0);
+	// console.log("Abesence rate gooten: ", absenceRate);
 
-	let totalArr = [{"name" : "Ikke Godkendt", "value" : absenceRate}];
+	let totalArr = [
+		{"name" : "Ikke Godkendt", "value" : absenceRate},
+		{"name" : "Til stede", "value" : 100 - absenceRate},
+	];
 
-	// console.log(totalArr);
 	return totalArr
 }
 
