@@ -4,7 +4,6 @@ import path from "path";
 const { DateTime } = require('luxon'); // optional, for datetime formatting
 
 // Open database connection
-//const dbPath = path.resolve("C:/Andet/HTXProgrammering/Git/InformatikEksamen/somename.db"); // Kasper Path
 const dbPath = path.resolve("C:/Users/nordi/OneDrive/Coding/InformatikEksamen/somename.db"); // Nordin Path
 
 
@@ -33,9 +32,13 @@ async function getStudentIdFromCard(card_id) {
 	});
 }
 
-async function studentAbsence(card_id, subjectID = 0) {
+async function studentAbsence(card_id, subjectID = 0, fromDate, toDate) {
 	const studentID = await getStudentIdFromCard(card_id);
 	if (!studentID) return 0;
+	
+	if (fromDate) fromDate = DateTime.fromISO(fromDate).toISODate();
+	if (toDate) toDate = DateTime.fromISO(toDate).toISODate();
+	// console.log("Dates: ", fromDate, "\n", toDate);
   
 	const currentTime = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss');
   
@@ -52,17 +55,34 @@ async function studentAbsence(card_id, subjectID = 0) {
 				AND class_schedule_student_absence.absence = ?`
   
 		const params = [studentID, currentTime, getAbsence];
-  
+		
+		if(fromDate && toDate){
+			
+			q += `\nAND (
+							DATE(?) BETWEEN DATE(class_schedule.start_time) AND DATE(class_schedule.end_time)
+						OR	DATE(?) BETWEEN DATE(class_schedule.start_time) AND DATE(class_schedule.end_time)
+					)`;
+			params.push(fromDate);
+			params.push(toDate);
+		}else{
+			if(fromDate){
+				q += `\nAND DATE(class_schedule.end_time) = DATE(?)`
+				params.push(fromDate);
+			}
+			if(toDate){
+				q += `\nAND DATE(class_schedule.end_time) = DATE(?)`
+				params.push(toDate);
+			}
+		}
+
 		if (subjectID > 0) {
 		  q += `\nAND class_schedule.class_id = ?`;
 		  params.push(subjectID);
-		}else{
-			console.log("-------NOW--------");
 		}
   
 		db.get(q, params, (err, row) => {
 		  if (err) return reject(err);
-		//   console.log("ROW FOUND: ", row);
+		//   console.log(params, q, "ROW FOUND: ", row);
 		  const amountCount = Object.values(row)[0];
 		//   console.log("RETURNED: ", amountCount);
 		  resolve(amountCount || 0);
@@ -75,11 +95,12 @@ async function studentAbsence(card_id, subjectID = 0) {
   
 	console.log("absent: ", absent, "present: ", present);
 	if (absent + present === 0) return 0;
+	console.log("Percentage: ", Math.floor((absent / (absent + present)) * 100));
 	return Math.floor((absent / (absent + present)) * 100);
 }
 
-async function getAllSubjectAbsence(card_id) {
-	const studentID = await getStudentIdFromCard(card_id);
+async function getAllSubjectAbsence(card_id, fromDate, toDate) {
+	const studentID = await getStudentIdFromCard(card_id, );
 	if (!studentID) return [];
   
 	const q = `SELECT classes.class_id, classes.name FROM classes
@@ -95,18 +116,17 @@ async function getAllSubjectAbsence(card_id) {
   
 		const results = [];
 		for (const { class_id, name } of allClassIDs) {
-		  const absenceRate = await studentAbsence(card_id, class_id);
+		  const absenceRate = await studentAbsence(card_id, class_id, fromDate, toDate);
 		  results.push({"name" : name, "value" : absenceRate });
 		}
   
 		resolve(results);
 	  });
 	});
-  }
+}
   
-
-async function getTotalAbsence(card_id){
-	const absenceRate = await studentAbsence(card_id, 0);
+async function getTotalAbsence(card_id, dateFrom, dateTo){
+	const absenceRate = await studentAbsence(card_id, 0, dateFrom, dateTo);
 	// console.log("Abesence rate gooten: ", absenceRate);
 
 	let totalArr = [
